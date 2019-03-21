@@ -1,0 +1,34 @@
+class A extends B {
+    void bar() {
+    }
+    void foo() {
+        tmp();
+    }
+    void tmp() {
+    }
+}
+
+void main() {
+    A a;
+    a = New(A);
+    a.tmp();
+    tmp();
+    Print(1);
+} 
+
+class C extends A {
+
+}
+
+class B {
+    int b;
+    void tmp() {}
+}
+
+void tmp() {
+
+}
+
+// void PrintInt() {
+
+// }

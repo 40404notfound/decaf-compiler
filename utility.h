@@ -7,9 +7,8 @@
 #ifndef _H_utility
 #define _H_utility
 
-#include <stdlib.h>
 #include <stdio.h>
-
+#include <stdlib.h>
 
 /* Function: Failure()
  * Usage: Failure("Out of memory!");
@@ -22,8 +21,6 @@
  */
 void Failure(const char *format, ...);
 
-
-
 /* Macro: Assert()
  * Usage: Assert(num > 0);
  * ----------------------
@@ -34,11 +31,11 @@ void Failure(const char *format, ...);
  * will print something similar to the following if ptr is NULL:
  *   *** Failure: Assertion failed: hashtable.cc, line 55:
  *       ptr != NULL
- */ 
-#define Assert(expr)  \
-  ((expr) ? (void)0 : Failure("Assertion failed: %s, line %d:\n    %s", __FILE__, __LINE__, #expr))
-
-
+ */
+#define Assert(expr)                                                           \
+    ((expr) ? (void) 0                                                         \
+            : Failure("Assertion failed: %s, line %d:\n    %s", __FILE__,      \
+                      __LINE__, #expr))
 
 /* Function: PrintDebug()
  * Usage: PrintDebug("parser", "found ident %s\n", ident);
@@ -51,7 +48,6 @@ void Failure(const char *format, ...);
  */
 void PrintDebug(const char *key, const char *format, ...);
 
-
 /* Function: SetDebugForKey()
  * Usage: SetDebugForKey("scope", true);
  * -------------------------------------
@@ -61,7 +57,6 @@ void PrintDebug(const char *key, const char *format, ...);
  */
 void SetDebugForKey(const char *key, bool val);
 
-
 /* Function: IsDebugOn()
  * Usage: if (IsDebugOn("scope")) ...
  * ----------------------------------
@@ -70,8 +65,6 @@ void SetDebugForKey(const char *key, bool val);
  */
 bool IsDebugOn(const char *key);
 
-
-
 /* Function: ParseCommandLine
  * --------------------------
  * Turn on the debugging flags from the command line.  Verifies that
@@ -79,5 +72,9 @@ bool IsDebugOn(const char *key);
  * as being flags to turn on.
  */
 void ParseCommandLine(int argc, char *argv[]);
-     
+
+bool isErrorTypeName(const char *tocheck);
+
+bool isArrayTypeName(const char *tocheck);
+
 #endif

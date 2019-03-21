@@ -5,114 +5,124 @@
  * language (for, if, return, etc.) there is a corresponding
  * node class for that construct. 
  *
- * pp4: You will need to extend the Stmt classes to implement
- * code generation for statements.
+ * pp3: You will need to extend the Stmt classes to implement
+ * semantic analysis for rules pertaining to statements.
  */
-
 
 #ifndef _H_ast_stmt
 #define _H_ast_stmt
 
-#include "list.h"
 #include "ast.h"
+#include "ast_decl.h"
+#include "list.h"
 
 class Decl;
 class VarDecl;
 class Expr;
-  
-class Program : public Node
-{
-  protected:
-     List<Decl*> *decls;
-     
-  public:
-     Program(List<Decl*> *declList);
-     void Check();
-     void Emit();
+
+class Program : public Node {
+protected:
+    List<Decl *> *decls;
+    vector<Node *> children();
+
+public:
+    Program(List<Decl *> *declList);
+    void Check();
+    void Emit();
 };
 
-class Stmt : public Node
-{
-  public:
-     Stmt() : Node() {}
-     Stmt(yyltype loc) : Node(loc) {}
+class Stmt : public Node {
+public:
+    Stmt() : Node() {}
+    Stmt(yyltype loc) : Node(loc) {}
 };
 
-class StmtBlock : public Stmt 
-{
-  protected:
-    List<VarDecl*> *decls;
-    List<Stmt*> *stmts;
-    
-  public:
-    StmtBlock(List<VarDecl*> *variableDeclarations, List<Stmt*> *statements);
+class StmtBlock : public Stmt {
+protected:
+    List<VarDecl *> *decls;
+    List<Stmt *> *stmts;
+    vector<Node *> children();
+
+public:
+    StmtBlock(List<VarDecl *> *variableDeclarations, List<Stmt *> *statements);
+    void ResolveConflict(set<Node *> *visited);
 };
 
-  
-class ConditionalStmt : public Stmt
-{
-  protected:
+class ConditionalStmt : public Stmt {
+protected:
     Expr *test;
     Stmt *body;
-  
-  public:
+    vector<Node *> children();
+
+public:
+    void Check(Context ctx);
+
     ConditionalStmt(Expr *testExpr, Stmt *body);
 };
 
-class LoopStmt : public ConditionalStmt 
-{
-  public:
-    LoopStmt(Expr *testExpr, Stmt *body)
-            : ConditionalStmt(testExpr, body) {}
+class LoopStmt : public ConditionalStmt {
+public:
+    void Check(Context ctx) {
+        ctx.in_loop = true;
+        ConditionalStmt::Check(ctx);
+    }
+    LoopStmt(Expr *testExpr, Stmt *body) : ConditionalStmt(testExpr, body) {}
 };
 
-class ForStmt : public LoopStmt 
-{
-  protected:
+class ForStmt : public LoopStmt {
+protected:
     Expr *init, *step;
-  
-  public:
+    vector<Node *> children();
+
+public:
     ForStmt(Expr *init, Expr *test, Expr *step, Stmt *body);
 };
 
-class WhileStmt : public LoopStmt 
-{
-  public:
+class WhileStmt : public LoopStmt {
+public:
     WhileStmt(Expr *test, Stmt *body) : LoopStmt(test, body) {}
 };
 
-class IfStmt : public ConditionalStmt 
-{
-  protected:
+class IfStmt : public ConditionalStmt {
+protected:
     Stmt *elseBody;
-  
-  public:
+
+    vector<Node *> children();
+
+public:
     IfStmt(Expr *test, Stmt *thenBody, Stmt *elseBody);
 };
 
-class BreakStmt : public Stmt 
-{
-  public:
+class BreakStmt : public Stmt {
+public:
     BreakStmt(yyltype loc) : Stmt(loc) {}
+    void Check(Context ctx) {
+        Stmt::Check(ctx);
+        if (!ctx.in_loop)
+            ReportError::BreakOutsideLoop(this);
+    }
 };
 
-class ReturnStmt : public Stmt  
-{
-  protected:
+class ReturnStmt : public Stmt {
+protected:
     Expr *expr;
-  
-  public:
+    vector<Node *> children();
+
+public:
+    void Check(Context ctx);
     ReturnStmt(yyltype loc, Expr *expr);
 };
 
-class PrintStmt : public Stmt
-{
-  protected:
-    List<Expr*> *args;
-    
-  public:
-    PrintStmt(List<Expr*> *arguments);
-};
+class PrintStmt : public Stmt {
+protected:
+    List<Expr *> *args;
+    vector<Node *> children();
 
+public:
+    void Check(Context ctx);
+    void Emit();
+
+    PrintStmt(List<Expr *> *arguments);
+};
 
 #endif

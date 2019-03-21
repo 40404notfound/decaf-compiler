@@ -1,0 +1,29 @@
+class A {
+    void call() {
+        a = 1;
+    }
+    void call2() {
+        int a;
+        a = 1;
+    }
+    void tmp() {
+        call();
+    }
+    int a;
+}
+void main()
+{
+    A cl;
+    int a;
+    int b;
+    cl.tmp();
+    call();
+    a = 1;
+    b = 1/0;
+    {
+        int a;
+        int b;
+    }
+    Print(1,2,3);
+}
+void call() {}

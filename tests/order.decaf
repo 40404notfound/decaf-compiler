@@ -1,0 +1,15 @@
+int a;
+void A() {
+    B();
+}
+void B() {
+    C();
+}
+
+void C() {
+    A();
+}
+
+void main() {
+
+}

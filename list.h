@@ -38,9 +38,10 @@ class CodeGenerator;
 template<class Element> class List {
 
  private:
-    std::deque<Element> elems;
 
  public:
+    std::deque<Element> elems;
+
            // Create a new empty list
     List() {}
            // Copy a list

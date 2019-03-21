@@ -34,6 +34,9 @@ Location *CodeGenerator::GenTempVar()
      in stack frame for use as temporary. Until you
      do that, the assert below will always fail to remind
      you this needs to be implemented  */
+  int offSet = OffsetToFirstGlobal - localVarNum * 4;
+  localVarNum++;
+  result = new Location(fpRelative, offSet, temp);
   Assert(result != NULL);
   return result;
 }
@@ -112,6 +115,7 @@ void CodeGenerator::GenReturn(Location *val)
 
 BeginFunc *CodeGenerator::GenBeginFunc()
 {
+  Assert(localVarNum == 0);
   BeginFunc *result = new BeginFunc;
   code->Append(result);
   return result;
@@ -119,6 +123,7 @@ BeginFunc *CodeGenerator::GenBeginFunc()
 
 void CodeGenerator::GenEndFunc()
 {
+  localVarNum = 0;
   code->Append(new EndFunc());
 }
 
@@ -201,4 +206,5 @@ void CodeGenerator::DoFinalCodeGen()
   }
 }
 
+CodeGenerator* CodeGenerator::instance = new CodeGenerator();
 
