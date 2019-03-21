@@ -46,6 +46,7 @@ protected:
 public:
     StmtBlock(List<VarDecl *> *variableDeclarations, List<Stmt *> *statements);
     void ResolveConflict(set<Node *> *visited);
+    virtual void Emit();
 };
 
 class ConditionalStmt : public Stmt {

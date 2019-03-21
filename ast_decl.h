@@ -128,6 +128,7 @@ public:
     // numVar for variableOffsets of children
     int numVar = 0;
     void generateLocations();
+    void Emit();
 };
 
 class InterfaceDecl : public Decl {

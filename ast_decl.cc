@@ -61,7 +61,7 @@ bool VarDecl::CheckDeclMatch(Decl *decl) {
 void VarDecl::Emit() {
     // only funtion local var locations
     Assert(location == NULL);
-    int offSet = CodeGenerator::OffsetToFirstGlobal -
+    int offSet = CodeGenerator::OffsetToFirstLocal -
                  CodeGenerator::instance->localVarNum * 4;
     CodeGenerator::instance->localVarNum++;
     location = new Location(fpRelative, offSet, GetName());
@@ -248,23 +248,25 @@ void ClassDecl::generateLocations() {
         return;
     methodLabels = new List<const char *>;
     methodTable = new Hashtable<int>;
-    if (extendClass)
+    if (extendClass) {
         extendClass->generateLocations();
-    numVar = extendClass->numVar;
-    for (int i = 0; i < extendClass->methodLabels->NumElements(); i++) {
-        const char *method = extendClass->methodLabels->Nth(i);
-        char *methodDup = strdup(method);
-        methodLabels->Append(methodDup);
-        methodTable->Enter(methodDup, i);
+        numVar = extendClass->numVar;
+        for (int i = 0; i < extendClass->methodLabels->NumElements(); i++) {
+            const char *method = extendClass->methodLabels->Nth(i);
+            char *methodDup = strdup(method);
+            methodLabels->Append(methodDup);
+            methodTable->Enter(methodDup, i);
+        }
     }
 
     for (int i = 0; i < members->NumElements(); i++) {
         Decl *decl = members->Nth(i);
-        VarDecl *varDecl = dynamic_cast<VarDecl *>(varDecl);
-        FnDecl *fnDecl = dynamic_cast<FnDecl *>(varDecl);
+        VarDecl *varDecl = dynamic_cast<VarDecl *>(decl);
+        FnDecl *fnDecl = dynamic_cast<FnDecl *>(decl);
         if (varDecl) {
             // should not be a global or local variable
             Assert(varDecl->location == NULL);
+            // must be a new variable cuz no conflict
             varDecl->offset =
                 CodeGenerator::OffsetToFirstMember + 4 * (numVar++);
         } else if (fnDecl) {
@@ -288,6 +290,15 @@ void ClassDecl::generateLocations() {
             Assert(false);
         }
     }
+}
+
+void ClassDecl::Emit() {
+    // TODO: generate Vtables, emit stmts
+    for (auto &i : members->elems) {
+        if (dynamic_cast<FnDecl *>(i))
+            i->Emit();
+    }
+    CodeGenerator::instance->GenVTable(GetName(), methodLabels);
 }
 
 /* bool InterfaceDecl::checkClassImplementThis(ClassDecl* classDecl) { */
@@ -435,6 +446,11 @@ vector<Node *> FnDecl::children() {
 
     return result;
 }
+void PrintLocation(VarDecl *var) {
+    printf("%s: loc:%d ", var->GetName(), var->location->GetOffset());
+    printf("seg: %s\n",
+           var->location->GetSegment() == gpRelative ? "global" : "local");
+}
 
 void FnDecl::Emit() {
     int cnt = 0;
@@ -447,16 +463,21 @@ void FnDecl::Emit() {
     }
     if (scope->parent == StackNode::root) {
         // global
-        CodeGenerator::instance->GenLabel(GetName());
+        Assert(label == NULL);
+        const char *fnName = GetName();
+        if (strcmp(fnName, "main") == 0)
+            label = strdup("main");
+        else
+            label = getMethodLabel(NULL, fnName);
+        CodeGenerator::instance->GenLabel(label);
     } else {
         // class
-        // char tmp[128];
-        // ClassDecl *parent = dynamic_cast<ClassDecl *>(parent);
-        // sprintf(tmp, "_%s.%s", parent->GetName(), GetName());
         Assert(label);
         CodeGenerator::instance->GenLabel(label);
     }
     BeginFunc *beginFunc = CodeGenerator::instance->GenBeginFunc();
+    // CodeGenerator::instance->localVarNum = cnt;
+    // printf("%d\n", cnt);
     if (body)
         body->Emit();
     beginFunc->SetFrameSize(4 * CodeGenerator::instance->localVarNum);

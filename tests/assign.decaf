@@ -1,0 +1,20 @@
+class A {
+    int a;
+    int b;
+    void tmp() {
+        int d;
+        int c;
+        c = 1;
+        a = c;
+        c = a;
+        c = a;
+        b = c;
+        a = b;
+    }
+}
+
+void main() {
+    int a;
+    a = 1;
+    Print(a);
+}

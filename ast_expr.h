@@ -102,10 +102,10 @@ protected:
 
 public:
     Operator(yyltype loc, const char *tok);
-    friend class CompoundExpr;
     friend std::ostream &operator<<(std::ostream &out, Operator *o) {
         return out << o->tokenString;
     }
+    char *getToken() { return tokenString; }
 };
 
 class CompoundExpr : public Expr {
@@ -119,9 +119,11 @@ public:
     CompoundExpr(Expr *lhs, Operator *op, Expr *rhs); // for binary
     CompoundExpr(Operator *op, Expr *rhs);            // for unary
     virtual Location *cgen() {
-        Location* l = left->cgen();
-        Location* r = right->cgen();
-        return CodeGenerator::instance->GenBinaryOp(op->tokenString, l, r);
+        Location *l = left->cgen();
+        Location *r = right->cgen();
+        char *opStr = op->getToken();
+        // {"+", "-", "*", "/", "%", "==", "<", "&&", "||"};;
+        return CodeGenerator::instance->GenBinaryOp(op->getToken(), l, r);
     }
 };
 
@@ -170,6 +172,27 @@ public:
     }
     RelationalExpr(Expr *lhs, Operator *op, Expr *rhs)
         : ArithmeticExpr(lhs, op, rhs) {}
+    virtual Location *cgen() {
+        Location *l = left->cgen();
+        Location *r = right->cgen();
+        char *opStr = op->getToken();
+        if (strcmp(opStr, "<=") == 0) {
+            Location *lessThan =
+                CodeGenerator::instance->GenBinaryOp("<", l, r);
+            Location *equal = CodeGenerator::instance->GenBinaryOp("==", l, r);
+            Location *rv =
+                CodeGenerator::instance->GenBinaryOp("||", lessThan, equal);
+            return rv;
+        } else if (strcmp(opStr, ">=") == 0) {
+            Location *greaterThan =
+                CodeGenerator::instance->GenBinaryOp(">", l, r);
+            Location *equal = CodeGenerator::instance->GenBinaryOp("==", l, r);
+            Location *rv =
+                CodeGenerator::instance->GenBinaryOp("||", greaterThan, equal);
+            return rv;
+        }
+        return CompoundExpr::cgen();
+    }
 };
 
 class EqualityExpr : public CompoundExpr {
@@ -191,6 +214,22 @@ public:
     EqualityExpr(Expr *lhs, Operator *op, Expr *rhs)
         : CompoundExpr(lhs, op, rhs) {}
     const char *GetPrintNameForNode() { return "EqualityExpr"; }
+    virtual Location *cgen() {
+        Location *l = left->cgen();
+        Location *r = right->cgen();
+        char *opStr = op->getToken();
+        Location *equal = NULL;
+        if (left->cachedType == Type::stringType) {
+            equal = CodeGenerator::instance->GenBuiltInCall(StringEqual, l, r);
+        } else {
+            equal = CodeGenerator::instance->GenBinaryOp("==", l, r);
+        }
+        if (strcmp(opStr, "==") == 0)
+            return equal;
+        Location *zero = CodeGenerator::instance->GenLoadConstant(0);
+        Location *rv = CodeGenerator::instance->GenBinaryOp("==", equal, zero);
+        return rv;
+    }
 };
 
 class LogicalExpr : public CompoundExpr {
@@ -215,6 +254,18 @@ public:
         : CompoundExpr(lhs, op, rhs) {}
     LogicalExpr(Operator *op, Expr *rhs) : CompoundExpr(op, rhs) {}
     const char *GetPrintNameForNode() { return "LogicalExpr"; }
+
+    virtual Location *cgen() {
+        if (left == NULL) {
+            Assert(strcmp(op->getToken(), "!") == 0);
+            Location *r = right->cgen();
+            Location *zero = CodeGenerator::instance->GenLoadConstant(0);
+            Location *rv = CodeGenerator::instance->GenBinaryOp("==", r, zero);
+            return rv;
+        } else {
+            return CompoundExpr::cgen();
+        }
+    }
 };
 
 class AssignExpr : public CompoundExpr {
@@ -232,11 +283,17 @@ public:
     AssignExpr(Expr *lhs, Operator *op, Expr *rhs)
         : CompoundExpr(lhs, op, rhs) {}
     const char *GetPrintNameForNode() { return "AssignExpr"; }
+    virtual Location *cgen() {
+        Assert(false);
+        return NULL;
+    }
+    virtual void Emit();
 };
 
 class LValue : public Expr {
 public:
     LValue(yyltype loc) : Expr(loc) {}
+    virtual void getAssign(Location *rhs) = 0;
 };
 
 class This : public Expr {
@@ -254,6 +311,7 @@ public:
                 new Identifier({0, 0, 0, 0, 0, 0}, ctx.outer_class->GetName()));
         }
     }
+    Location *cgen() { return new Location(fpRelative, 4, "this"); }
 };
 
 class ArrayAccess : public LValue {
@@ -261,6 +319,11 @@ protected:
     Expr *base, *subscript;
 
     vector<Node *> children();
+
+    // for IR
+    Location *baseLocation = NULL;
+    int offSet = 0;
+    void genBaseAndOffSet();
 
 public:
     void Check(Context ctx) {
@@ -283,6 +346,9 @@ public:
         }
     }
     ArrayAccess(yyltype loc, Expr *base, Expr *subscript);
+
+    Location *cgen();
+    virtual void getAssign(Location *rhs);
 };
 
 /* Note that field access is used both for qualified names
@@ -376,8 +442,15 @@ protected:
 
     vector<Node *> children();
 
+    // For IR
+    Location *baseLocation = NULL;
+    int offSet = 0;
+    void genBaseAndOffSet();
+
 public:
     FieldAccess(Expr *base, Identifier *field); //ok to pass NULL base
+    Location *cgen();
+    void getAssign(Location *rhs);
 };
 
 /* Like field access, call is used both for qualified base.field()
@@ -545,6 +618,9 @@ public:
         cachedType = Type::intType;
     }
     ReadIntegerExpr(yyltype loc) : Expr(loc) {}
+    Location *cgen() {
+        return CodeGenerator::instance->GenBuiltInCall(ReadInteger);
+    }
 };
 
 class ReadLineExpr : public Expr {
@@ -554,6 +630,9 @@ public:
         cachedType = Type::stringType;
     }
     ReadLineExpr(yyltype loc) : Expr(loc) {}
+    Location *cgen() {
+        return CodeGenerator::instance->GenBuiltInCall(ReadLine);
+    }
 };
 
 #endif

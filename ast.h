@@ -72,7 +72,7 @@ public:
     virtual void resolve_compound_expr_type(Context ctx);
     virtual void resolve_call_args(Context ctx);
     virtual void resolve_improper_statement(Context ctx);
-    virtual void Check() { assert(false); }
+    virtual void Check() {  }
     virtual void Check(Context ctx);
 
     virtual void Emit() {return;}

@@ -56,17 +56,23 @@ void Program::Check() {
             i->Check(ctx);
         }
     }
+    return;
+}
+
+void Program::Emit() {
     // first locations
     int cnt = 0;
     for (auto &i : children()) {
         VarDecl *var = dynamic_cast<VarDecl *>(i);
         if (var) {
-            var->location = new Location(gpRelative, (cnt++) * 4, var->GetName());
+            var->location =
+                new Location(gpRelative, (cnt++) * 4, var->GetName());
             continue;
-        } 
-        ClassDecl *clas = dynamic_cast<ClassDecl*>(i);
+        }
+        ClassDecl *clas = dynamic_cast<ClassDecl *>(i);
         if (clas) {
             clas->generateLocations();
+            continue;
         }
     }
     // Function locations are all at the beginning so we can combine
@@ -74,11 +80,11 @@ void Program::Check() {
     for (auto &i : children()) {
         VarDecl *var = dynamic_cast<VarDecl *>(i);
         // Fn or Class
-        if (var==NULL) {
+        if (var == NULL) {
             i->Emit();
         }
     }
-    return;
+    CodeGenerator::instance->DoFinalCodeGen();
 }
 
 vector<Node *> Program::children() {
@@ -98,6 +104,12 @@ vector<Node *> StmtBlock::children() {
     result.assign(decls->elems.begin(), decls->elems.end());
     result.insert(result.end(), stmts->elems.begin(), stmts->elems.end());
     return result;
+}
+
+void StmtBlock::Emit() {
+    for (auto &i : children()) {
+        i->Emit();
+    }
 }
 
 void StmtBlock::ResolveConflict(set<Node *> *visited) {

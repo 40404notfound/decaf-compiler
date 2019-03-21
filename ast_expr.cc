@@ -11,7 +11,6 @@
 
 IntConstant::IntConstant(yyltype loc, int val) : Expr(loc) {
     value = val;
-
 }
 
 DoubleConstant::DoubleConstant(yyltype loc, double val) : Expr(loc) {
@@ -31,6 +30,7 @@ Operator::Operator(yyltype loc, const char *tok) : Node(loc) {
     Assert(tok != NULL);
     strncpy(tokenString, tok, sizeof(tokenString));
 }
+
 CompoundExpr::CompoundExpr(Expr *l, Operator *o, Expr *r)
     : Expr(Join(l->GetLocation(), r->GetLocation())) {
     Assert(l != NULL && o != NULL && r != NULL);
@@ -126,7 +126,7 @@ vector<Node *> NewArrayExpr::children() {
 }
 
 void NewExpr::CheckType() {
-    auto tmp=cType->CheckTypeHelper(LookingForClass);
+    auto tmp = cType->CheckTypeHelper(LookingForClass);
     cType = dynamic_cast<NamedType *>(tmp);
 }
 
@@ -134,3 +134,74 @@ void NewArrayExpr::CheckType() {
     elemType = elemType->CheckTypeHelper(LookingForType);
 }
 
+void AssignExpr::Emit() {
+    // assign to class member var or store to local
+    Location *rhs = right->cgen();
+    LValue *lvalue = dynamic_cast<LValue *>(left);
+    lvalue->getAssign(rhs);
+}
+
+void FieldAccess::genBaseAndOffSet() {
+    VarDecl *fieldDecl = NULL;
+    if (base == NULL) {
+        fieldDecl = dynamic_cast<VarDecl *>(scope->GetSymbol(field->GetName()));
+        Assert(fieldDecl);
+        if (fieldDecl->location) {
+            // local
+            baseLocation = fieldDecl->location;
+            offSet = -1;
+        } else {
+            // class member
+            baseLocation = new Location(fpRelative, 4, "this");
+            offSet = fieldDecl->offset;
+        }
+    } else {
+        Decl *baseDeclNode =
+            StackNode::namedTypeTable->GetSymbol(base->cachedType->GetName());
+        Assert(baseDeclNode);
+        ClassDecl *baseDecl = dynamic_cast<ClassDecl *>(baseDeclNode);
+        Assert(baseDecl);
+        fieldDecl =
+            dynamic_cast<VarDecl *>(baseDecl->GetFields(field->GetName()));
+        Assert(fieldDecl);
+        Assert(fieldDecl->offset);
+        Assert(fieldDecl->location == NULL);
+        baseLocation = base->cgen();
+        offSet = fieldDecl->offset;
+    }
+}
+
+Location *FieldAccess::cgen() {
+    // load from baseLocation & offSet
+    Assert(baseLocation == NULL && offSet == 0);
+    genBaseAndOffSet();
+    if (offSet == -1) return baseLocation;
+    return CodeGenerator::instance->GenLoad(baseLocation, offSet);
+}
+
+void FieldAccess::getAssign(Location *rhs) {
+    Assert(baseLocation == NULL && offSet == 0);
+    genBaseAndOffSet();
+    if (offSet == -1) {
+        CodeGenerator::instance->GenAssign(baseLocation, rhs);
+        return;
+    }
+    CodeGenerator::instance->GenStore(baseLocation, rhs, offSet);
+}
+
+
+void ArrayAccess::genBaseAndOffSet() {
+
+}
+
+Location *ArrayAccess::cgen() {
+    Assert(baseLocation == NULL && offSet == 0);
+    genBaseAndOffSet();
+    return CodeGenerator::instance->GenLoad(baseLocation, offSet);
+}
+
+void ArrayAccess::getAssign(Location* rhs) {
+    Assert(baseLocation == NULL && offSet == 0);
+    genBaseAndOffSet();
+    CodeGenerator::instance->GenStore(baseLocation, rhs, offSet);
+}

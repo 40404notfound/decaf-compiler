@@ -1,0 +1,20 @@
+class A extends B {
+    int a;
+    void tmp() {
+        B cb;
+        this.b = 1;
+        a = this.b;
+        cb.b = 2;
+    }
+}
+
+class B {
+    int b;
+}
+
+void main() {
+    A a;
+    int b;
+    b = 1;
+    Print(b);
+}

@@ -1,0 +1,27 @@
+void tmp(int a, int b) {
+    int a;
+}
+
+void main(){
+    int a;
+    int b;
+    a = 1;
+    Print(1+1);
+    Print(1*1);
+    Print(1/1);
+    Print("123\n");
+    Print("123");
+    {
+        int a;
+        int b;
+        {
+            int a;
+            int b;
+        }
+    }
+}
+
+void bar() {
+    int a;
+    int b;
+}

@@ -34,7 +34,7 @@ Location *CodeGenerator::GenTempVar()
      in stack frame for use as temporary. Until you
      do that, the assert below will always fail to remind
      you this needs to be implemented  */
-  int offSet = OffsetToFirstGlobal - localVarNum * 4;
+  int offSet = OffsetToFirstLocal - localVarNum * 4;
   localVarNum++;
   result = new Location(fpRelative, offSet, temp);
   Assert(result != NULL);
