@@ -76,6 +76,7 @@ void Program::Emit() {
     }
     if (!CodeGenerator::instance->ifMain) {
         ReportError::NoMainFound();
+        return;
     }
     // local vars locations are all at the beginning so we can combine
     // this with emit
@@ -156,6 +157,48 @@ vector<Node *> ForStmt::children() {
     return result;
 }
 
+void ForStmt::Emit() {
+    init->Emit();
+    const char *beginLabel = CodeGenerator::instance->NewLabel();
+    const char *breakLabel = CodeGenerator::instance->NewLabel();
+    CodeGenerator::instance->GenLabel(beginLabel);
+    Location *testLocation = test->cgen();
+    CodeGenerator::instance->GenIfZ(testLocation, breakLabel);
+    CodeGenerator::instance->loopEndLabels->push(
+        breakLabel); // labels recorded for break
+    body->Emit();
+    step->Emit();
+    CodeGenerator::instance->GenGoto(beginLabel);
+    Assert(CodeGenerator::instance->loopEndLabels->size());
+    const char *tmp = CodeGenerator::instance->loopEndLabels->top();
+    Assert(strcmp(tmp, breakLabel) == 0);
+    CodeGenerator::instance->loopEndLabels->pop();
+    CodeGenerator::instance->GenLabel(breakLabel);
+}
+
+void WhileStmt::Emit() {
+    // same as for stmt without step and init
+    const char *beginLabel = CodeGenerator::instance->NewLabel();
+    const char *breakLabel = CodeGenerator::instance->NewLabel();
+    CodeGenerator::instance->GenLabel(beginLabel);
+    Location *testLocation = test->cgen();
+    CodeGenerator::instance->GenIfZ(testLocation, breakLabel);
+    CodeGenerator::instance->loopEndLabels->push(
+        breakLabel); // labels recorded for break
+    body->Emit();
+    CodeGenerator::instance->GenGoto(beginLabel);
+    Assert(CodeGenerator::instance->loopEndLabels->size());
+    const char *tmp = CodeGenerator::instance->loopEndLabels->top();
+    Assert(strcmp(tmp, breakLabel) == 0);
+    CodeGenerator::instance->loopEndLabels->pop();
+    CodeGenerator::instance->GenLabel(breakLabel);
+}
+
+void BreakStmt::Emit() {
+    const char *label = CodeGenerator::instance->loopEndLabels->top();
+    CodeGenerator::instance->GenGoto(label);
+}
+
 IfStmt::IfStmt(Expr *t, Stmt *tb, Stmt *eb) : ConditionalStmt(t, tb) {
     Assert(t != NULL && tb != NULL); // else can be NULL
     elseBody = eb;
@@ -170,6 +213,25 @@ vector<Node *> IfStmt::children() {
     return result;
 }
 
+void IfStmt::Emit() {
+    const char *elseLabel = NULL;
+    if (elseBody)
+        elseLabel = CodeGenerator::instance->NewLabel();
+    const char *endLabel = CodeGenerator::instance->NewLabel();
+    Location *testLocation = test->cgen();
+    if (elseBody) {
+        CodeGenerator::instance->GenIfZ(testLocation, elseLabel);
+        body->Emit();
+        CodeGenerator::instance->GenGoto(endLabel);
+        CodeGenerator::instance->GenLabel(elseLabel);
+        elseBody->Emit();
+    } else {
+        CodeGenerator::instance->GenIfZ(testLocation, endLabel);
+        body->Emit();
+    }
+    CodeGenerator::instance->GenLabel(endLabel);
+}
+
 ReturnStmt::ReturnStmt(yyltype loc, Expr *e) : Stmt(loc) {
     Assert(e != NULL);
     (expr = e)->SetParent(this);
@@ -179,6 +241,15 @@ vector<Node *> ReturnStmt::children() {
     vector<Node *> result = Stmt::children();
     result.push_back(expr);
     return result;
+}
+
+void ReturnStmt::Emit() {
+    Location *returnLocation = NULL;
+    if (expr) {
+        returnLocation = expr->cgen();
+    }
+    CodeGenerator::instance->GenReturn(returnLocation);
+    return;
 }
 
 PrintStmt::PrintStmt(List<Expr *> *a) {
@@ -213,6 +284,7 @@ void PrintStmt::Check(Context ctx) {
 
 void PrintStmt::Emit() {
     for (auto &i : args->elems) {
+        // printf("%s\n", i->cachedType->GetName());
         if ((string) i->cachedType->GetName() == "int") {
             CodeGenerator::instance->GenBuiltInCall(PrintInt, i->cgen(), NULL);
         }

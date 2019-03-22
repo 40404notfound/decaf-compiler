@@ -17,6 +17,8 @@
 #include "list.h"
 #include "tac.h"
 #include <stdlib.h>
+#include <stack>
+using std::stack;
 
 // These codes are used to identify the built-in functions
 typedef enum {
@@ -183,6 +185,7 @@ public:
         CodeGenerator::instance->GenBuiltInCall(Halt);
     }
     bool ifMain = false;
+    stack<const char*> *loopEndLabels;
 };
 
 #endif

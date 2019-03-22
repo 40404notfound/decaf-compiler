@@ -13,6 +13,7 @@
 CodeGenerator::CodeGenerator()
 {
   code = new List<Instruction*>();
+  loopEndLabels = new stack<const char*>();
 }
 
 char *CodeGenerator::NewLabel()

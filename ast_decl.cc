@@ -478,6 +478,10 @@ void FnDecl::generateLabel() {
 
 void FnDecl::Emit() {
     int cnt = 0;
+    if (scope->parent != StackNode::root) {
+        // this
+        cnt += 1;
+    }
     for (int i = 0; i < formals->NumElements(); i++) {
         VarDecl *decl = formals->Nth(i);
         if (decl) {

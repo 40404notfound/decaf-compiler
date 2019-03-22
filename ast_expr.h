@@ -120,8 +120,12 @@ public:
     CompoundExpr(Expr *lhs, Operator *op, Expr *rhs); // for binary
     CompoundExpr(Operator *op, Expr *rhs);            // for unary
     virtual Location *cgen() {
-        Location *l = left->cgen();
+        Location *l = left == NULL ? NULL : left->cgen();
         Location *r = right->cgen();
+        if (l == NULL) {
+            // unry
+            l = CodeGenerator::instance->GenLoadConstant(0);
+        }
         char *opStr = op->getToken();
         // {"+", "-", "*", "/", "%", "==", "<", "&&", "||"} + ">"
         return CodeGenerator::instance->GenBinaryOp(op->getToken(), l, r);
@@ -578,7 +582,7 @@ public:
     }
     NewExpr(yyltype loc, NamedType *clsType);
     void CheckType();
-    Location* cgen();
+    Location *cgen();
 };
 
 class NewArrayExpr : public Expr {
@@ -600,7 +604,7 @@ public:
     }
     NewArrayExpr(yyltype loc, Expr *sizeExpr, Type *elemType);
     void CheckType();
-    Location* cgen();
+    Location *cgen();
 };
 
 class ReadIntegerExpr : public Expr {

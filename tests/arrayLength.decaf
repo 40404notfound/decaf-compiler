@@ -1,0 +1,10 @@
+class A {
+    int[] a;
+    void tmp() {
+        a.length();
+    }
+}
+void main() {
+    int[] a;
+    a.length();
+}

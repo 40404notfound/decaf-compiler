@@ -1,0 +1,12 @@
+void main() {
+    int i;
+    i = 0;
+    if ( i== 1) {
+        Print(i);
+    } else {
+        Print(i+1);
+    }
+    if (i == 2 && i == 1 ) {
+        Print(i);
+    }
+}

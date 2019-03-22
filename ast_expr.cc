@@ -165,17 +165,23 @@ void NewArrayExpr::CheckType() {
 }
 
 Location *NewArrayExpr::cgen() {
+    // IntConstant* intConstant = dynamic_cast<IntConstant*>(size);
+    // DoubleConstant* doubleConstant = dynamic_cast<DoubleConstant*>(size);
+    // printf("%s\n",size->cachedType->GetName());
+    // Assert(intConstant);
     Location *numElement = size->cgen();
     // check size ifz numElement < 1 goto label
     Location *one1 = CodeGenerator::instance->GenLoadConstant(1);
-    Location *szLessOrEqualZero = CodeGenerator::instance->GenBinaryOp("<", numElement, one1);
-    const char* label = CodeGenerator::instance->NewLabel();
+    Location *szLessOrEqualZero =
+        CodeGenerator::instance->GenBinaryOp("<", numElement, one1);
+    const char *label = CodeGenerator::instance->NewLabel();
     CodeGenerator::instance->GenIfZ(szLessOrEqualZero, label);
     CodeGenerator::instance->GenError(ArraySizeNeg);
     // correct label below
     CodeGenerator::instance->GenLabel(label);
     Location *one = CodeGenerator::instance->GenLoadConstant(1);
-    Location *totalSz = CodeGenerator::instance->GenBinaryOp("+", one, numElement);
+    Location *totalSz =
+        CodeGenerator::instance->GenBinaryOp("+", one, numElement);
     Location *four = CodeGenerator::instance->GenLoadConstant(4);
     totalSz = CodeGenerator::instance->GenBinaryOp("*", totalSz, four);
     Location *alloc = CodeGenerator::instance->GenBuiltInCall(Alloc, totalSz);
@@ -288,6 +294,13 @@ void Call::genPopParams() {
 }
 
 Location *Call::cgen() {
+    if (base && dynamic_cast<ArrayType *>(base->cachedType)) {
+        // length
+        Assert((string) field->GetName() == "length");
+        Location *baseLocation = base->cgen();
+        return CodeGenerator::instance->GenLoad(baseLocation, -4);
+    }
+
     FnDecl *fnDecl = NULL;
     Location *baseLocation = NULL;
     List<Location *> *params = new List<Location *>;
@@ -306,6 +319,7 @@ Location *Call::cgen() {
         ifAcall = true;
         Decl *baseDeclNode =
             StackNode::namedTypeTable->GetSymbol(base->cachedType->GetName());
+        // printf("%s\n", base->cachedType->GetName());
         Assert(baseDeclNode);
         ClassDecl *baseDecl = dynamic_cast<ClassDecl *>(baseDeclNode);
         Assert(baseDecl);

@@ -77,11 +77,13 @@ protected:
 
 public:
     ForStmt(Expr *init, Expr *test, Expr *step, Stmt *body);
+    virtual void Emit();
 };
 
 class WhileStmt : public LoopStmt {
 public:
     WhileStmt(Expr *test, Stmt *body) : LoopStmt(test, body) {}
+    virtual void Emit();
 };
 
 class IfStmt : public ConditionalStmt {
@@ -92,6 +94,7 @@ protected:
 
 public:
     IfStmt(Expr *test, Stmt *thenBody, Stmt *elseBody);
+    virtual void Emit();
 };
 
 class BreakStmt : public Stmt {
@@ -102,6 +105,7 @@ public:
         if (!ctx.in_loop)
             ReportError::BreakOutsideLoop(this);
     }
+    virtual void Emit();
 };
 
 class ReturnStmt : public Stmt {
@@ -112,6 +116,7 @@ protected:
 public:
     void Check(Context ctx);
     ReturnStmt(yyltype loc, Expr *expr);
+    virtual void Emit();
 };
 
 class PrintStmt : public Stmt {

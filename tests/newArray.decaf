@@ -1,4 +1,8 @@
 void main() {
-    int[] m;
-    m = NewArray(10, int);
+    int[][] m;
+    int[] a;
+    m = NewArray(10, int[]);
+    m[1] = NewArray(10, int);
+    a = NewArray(10, int);
+    a[0] = 1;
 }

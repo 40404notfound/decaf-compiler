@@ -1,0 +1,9 @@
+class A {
+    int a;
+    void tmp(int a, int b) {
+        Print(a, b);
+    }
+}
+void main() {
+
+}
