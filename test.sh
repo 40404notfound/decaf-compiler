@@ -5,6 +5,21 @@
 #	echo $f
 #	./dcc < $i
 #done
+$(hostname | grep cane)
+if [ $? -eq 0 ]
+then
+    echo @@testing on samples/\*
+    for i in $(ls samples/*.decaf | grep -v 't5\|badlink\|black\|fib\|sort'); do
+        echo @@@ $i @@@
+        y=${i%.decaf}
+        f=${y##*/}
+        ./run samples/$f.decaf | tail -n +4 &> out/$f.my.out
+        diff -w out/$f.my.out samples/$f.out
+    done
+exit 0
+fi
+
+
 echo @@testing on samples/\*
 for i in $(ls samples/*.decaf | grep -v 't5\|badlink\|black\|fib\|sort'); do
     echo @@@ $i @@@
