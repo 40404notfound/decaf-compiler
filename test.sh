@@ -5,7 +5,7 @@
 #	echo $f
 #	./dcc < $i
 #done
-$(hostname | grep cane)
+tmp=$(hostname | grep cane)
 if [ $? -eq 0 ]
 then
     echo @@testing on samples/\*
