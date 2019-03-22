@@ -31,6 +31,19 @@ for i in $(ls samples/*.decaf | grep 't5\|black\|fib\|sort'); do
 done
 
 
+echo @@testing on tests/\*
+for i in $(ls tests/*.decaf); do
+    echo @@@ $i @@@
+    y=${i%.decaf}
+    f=${y##*/}
+    # ./solution/dcccaenupdate < $i 2> samples/$f.out
+    ./dcc < $i > out/$f.my.s
+    ./solution/dcc-caen < $i > out/$f.cor.s
+    # spim -f out/$f.my.s < samples/$f.in | tail -n +6 > out/$f.my.out
+    # spim -f out/$f.my.s < samples/$f.in | tail -n +6 > out/$f.my.out
+    # cat samples/$f.out | tail -n +2 > out/$f.cor.out
+    diff -w out/$f.my.s out/$f.cor.s
+done
 # for i in $(ls samples/*.decaf | grep 'badlink\'); do
 #     echo @@@ $i @@@
 #     y=${i%.decaf}
