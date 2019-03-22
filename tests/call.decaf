@@ -1,5 +1,25 @@
-void tmp() {
+class A {
+    int a;
+    void bar(int a, int b) {
+        tmp(1);
+        this.tmp(1);
+    }
+    void tmp(int a) {}
 }
+
+int tmp(int a, int b) {
+    bar(1, 2);
+}
+
+void bar(int a, int b) {
+    int a;
+}
+
 void main() {
-    tmp();
+    int a;
+    A ca;
+    int rv;
+    tmp(a, 2);
+    bar(1, 2);
+    ca.bar(1, 2);
 }

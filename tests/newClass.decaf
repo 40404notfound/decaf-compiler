@@ -1,0 +1,18 @@
+class A {
+    int a;
+    int b;
+}
+class B {
+    int a;
+    int b;
+    void tmp() {
+
+    }
+}
+
+void main() {
+    A a;
+    B b;
+    a = New(A);
+    b = New(B);
+}

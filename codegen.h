@@ -182,6 +182,7 @@ public:
         CodeGenerator::instance->GenBuiltInCall(PrintString, newLoc);
         CodeGenerator::instance->GenBuiltInCall(Halt);
     }
+    bool ifMain = false;
 };
 
 #endif

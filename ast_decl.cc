@@ -247,15 +247,22 @@ void ClassDecl::generateLocations() {
     if (methodLabels)
         return;
     methodLabels = new List<const char *>;
-    methodTable = new Hashtable<int>;
+    methodTable = new Hashtable<FnDecl *>;
+    methodNames = new List<const char *>;
     if (extendClass) {
         extendClass->generateLocations();
         numVar = extendClass->numVar;
+        Assert(extendClass->methodLabels->NumElements() ==
+               extendClass->methodNames->NumElements());
         for (int i = 0; i < extendClass->methodLabels->NumElements(); i++) {
-            const char *method = extendClass->methodLabels->Nth(i);
-            char *methodDup = strdup(method);
+            const char *methodLabel = extendClass->methodLabels->Nth(i);
+            const char *name = extendClass->methodNames->Nth(i);
+            char *methodDup = strdup(methodLabel);
             methodLabels->Append(methodDup);
-            methodTable->Enter(methodDup, i);
+            methodNames->Append(name);
+            FnDecl *parentMethod = extendClass->methodTable->Lookup(name);
+            Assert(parentMethod);
+            methodTable->Enter(name, parentMethod);
         }
     }
 
@@ -273,16 +280,24 @@ void ClassDecl::generateLocations() {
             const char *methodName = fnDecl->GetName();
             char *methodLabel = getMethodLabel(GetName(), methodName);
             fnDecl->label = methodLabel;
-            int newOffSet = methodTable->Lookup(methodName);
-            if (newOffSet) {
+            FnDecl *parentMethod = methodTable->Lookup(methodName);
+            int newOffSet = 0;
+            if (parentMethod) {
                 // insert the new overload method label at the original index
-                methodLabels->RemoveAt(newOffSet);
-                methodLabels->InsertAt(methodLabel, newOffSet);
-                // dont need to update methodTable cuz the same
+                newOffSet = parentMethod->offset;
+                Assert(newOffSet != -1);
+                // printf("%d\n", newOffSet);
+                int index = newOffSet / CodeGenerator::VarSize;
+                methodLabels->RemoveAt(index);
+                methodLabels->InsertAt(methodLabel, index);
+                methodTable->Enter(methodName, fnDecl);
+                // dont need to update methodName cuz the same
             } else {
-                newOffSet = methodLabels->NumElements();
+                newOffSet =
+                    methodLabels->NumElements() * CodeGenerator::VarSize;
                 methodLabels->Append(methodLabel);
-                methodTable->Enter(methodName, newOffSet);
+                methodNames->Append(methodName);
+                methodTable->Enter(methodName, fnDecl);
             }
             Assert(fnDecl->offset == -1);
             fnDecl->offset = newOffSet;
@@ -293,7 +308,6 @@ void ClassDecl::generateLocations() {
 }
 
 void ClassDecl::Emit() {
-    // TODO: generate Vtables, emit stmts
     for (auto &i : members->elems) {
         if (dynamic_cast<FnDecl *>(i))
             i->Emit();
@@ -452,6 +466,16 @@ void PrintLocation(VarDecl *var) {
            var->location->GetSegment() == gpRelative ? "global" : "local");
 }
 
+void FnDecl::generateLabel() {
+    const char *fnName = GetName();
+    if (strcmp(fnName, "main") == 0) {
+        label = strdup("main");
+        CodeGenerator::instance->ifMain = true;
+    } else {
+        label = getMethodLabel(NULL, fnName);
+    }
+}
+
 void FnDecl::Emit() {
     int cnt = 0;
     for (int i = 0; i < formals->NumElements(); i++) {
@@ -463,12 +487,7 @@ void FnDecl::Emit() {
     }
     if (scope->parent == StackNode::root) {
         // global
-        Assert(label == NULL);
-        const char *fnName = GetName();
-        if (strcmp(fnName, "main") == 0)
-            label = strdup("main");
-        else
-            label = getMethodLabel(NULL, fnName);
+        Assert(label);
         CodeGenerator::instance->GenLabel(label);
     } else {
         // class

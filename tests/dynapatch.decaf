@@ -1,0 +1,24 @@
+class A extends B {
+    int tmp() {
+
+    }
+}
+
+class B {
+    int a;
+    int bar() {
+
+    }
+    int tmp() {
+
+    }
+}
+
+void main() {
+    A a;
+    B b;
+    a.tmp();
+    a.bar();
+    b.bar();
+    b.tmp();
+}

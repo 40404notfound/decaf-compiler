@@ -40,6 +40,8 @@ public:
     virtual void AddGlobal();
     virtual bool CheckDeclMatch(Decl *decl) { return true; }
     // only for funDecl and VarDecl
+
+    virtual void PrePareForEmit() { Assert(false); }
 };
 
 class VarDecl : public Decl {
@@ -67,6 +69,7 @@ public:
 };
 
 class InterfaceDecl;
+class FnDecl;
 class ClassDecl : public Decl {
 protected:
     List<Decl *> *members;
@@ -122,13 +125,15 @@ public:
     void ResolveConflict(set<Node *> *visited);
 
     // for IR
-    List<const char *> *methodLabels=NULL;
-    // index for methods 
-    Hashtable<int> *methodTable=NULL;
+    List<const char *> *methodLabels = NULL;
+    List<const char *> *methodNames = NULL;
+    // index for methods
+    Hashtable<FnDecl*> *methodTable = NULL;
     // numVar for variableOffsets of children
     int numVar = 0;
     void generateLocations();
     void Emit();
+    virtual void PrePareForEmit() { generateLocations(); }
 };
 
 class InterfaceDecl : public Decl {
@@ -182,6 +187,8 @@ public:
     void ResolveConflict(set<Node *> *visited);
 
     void Emit();
+    void generateLabel();
+    virtual void PrePareForEmit() { generateLabel(); }
     char *label = NULL;
     int offset = -1; // only for member funcs
 };

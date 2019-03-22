@@ -55,6 +55,25 @@ vector<Node *> CompoundExpr::children() {
     return result;
 }
 
+Location *genLessOrEqual(Location *l, Location *r) {
+    Location *lessThan = CodeGenerator::instance->GenBinaryOp("<", l, r);
+    Location *equal = CodeGenerator::instance->GenBinaryOp("==", l, r);
+    Location *rv = CodeGenerator::instance->GenBinaryOp("||", lessThan, equal);
+    return rv;
+}
+
+Location *RelationalExpr::cgen() {
+    Location *l = left->cgen();
+    Location *r = right->cgen();
+    char *opStr = op->getToken();
+    if (strcmp(opStr, "<=") == 0) {
+        return genLessOrEqual(l, r);
+    } else if (strcmp(opStr, ">=") == 0) {
+        return genLessOrEqual(r, l);
+    }
+    return CodeGenerator::instance->GenBinaryOp(op->getToken(), l, r);
+}
+
 ArrayAccess::ArrayAccess(yyltype loc, Expr *b, Expr *s) : LValue(loc) {
     (base = b)->SetParent(this);
     (subscript = s)->SetParent(this);
@@ -112,6 +131,22 @@ vector<Node *> NewExpr::children() {
     return result;
 }
 
+void NewExpr::CheckType() {
+    auto tmp = cType->CheckTypeHelper(LookingForClass);
+    cType = dynamic_cast<NamedType *>(tmp);
+}
+
+Location *NewExpr::cgen() {
+    int typeSize = cType->GetTypeSize();
+    Location *szLoc = CodeGenerator::instance->GenLoadConstant(typeSize);
+
+    Location *rv = CodeGenerator::instance->GenBuiltInCall(Alloc, szLoc);
+    Location *vtableLocation =
+        CodeGenerator::instance->GenLoadLabel(cType->GetName());
+    CodeGenerator::instance->GenStore(rv, vtableLocation, 0);
+    return rv;
+}
+
 NewArrayExpr::NewArrayExpr(yyltype loc, Expr *sz, Type *et) : Expr(loc) {
     Assert(sz != NULL && et != NULL);
     (size = sz)->SetParent(this);
@@ -125,13 +160,28 @@ vector<Node *> NewArrayExpr::children() {
     return result;
 }
 
-void NewExpr::CheckType() {
-    auto tmp = cType->CheckTypeHelper(LookingForClass);
-    cType = dynamic_cast<NamedType *>(tmp);
-}
-
 void NewArrayExpr::CheckType() {
     elemType = elemType->CheckTypeHelper(LookingForType);
+}
+
+Location *NewArrayExpr::cgen() {
+    Location *numElement = size->cgen();
+    // check size ifz numElement < 1 goto label
+    Location *one1 = CodeGenerator::instance->GenLoadConstant(1);
+    Location *szLessOrEqualZero = CodeGenerator::instance->GenBinaryOp("<", numElement, one1);
+    const char* label = CodeGenerator::instance->NewLabel();
+    CodeGenerator::instance->GenIfZ(szLessOrEqualZero, label);
+    CodeGenerator::instance->GenError(ArraySizeNeg);
+    // correct label below
+    CodeGenerator::instance->GenLabel(label);
+    Location *one = CodeGenerator::instance->GenLoadConstant(1);
+    Location *totalSz = CodeGenerator::instance->GenBinaryOp("+", one, numElement);
+    Location *four = CodeGenerator::instance->GenLoadConstant(4);
+    totalSz = CodeGenerator::instance->GenBinaryOp("*", totalSz, four);
+    Location *alloc = CodeGenerator::instance->GenBuiltInCall(Alloc, totalSz);
+    CodeGenerator::instance->GenStore(alloc, numElement, 0);
+    Location *rv = CodeGenerator::instance->GenBinaryOp("+", alloc, four);
+    return rv;
 }
 
 void AssignExpr::Emit() {
@@ -227,4 +277,70 @@ void ArrayAccess::getAssign(Expr *expr) {
     genFinalLocation();
     Location *rhs = expr->cgen();
     CodeGenerator::instance->GenStore(finalLocation, rhs, 0);
+}
+
+void Call::genPopParams() {
+    int numParams = actuals->NumElements();
+    if (ifAcall) {
+        numParams += 1;
+    }
+    CodeGenerator::instance->GenPopParams(numParams * CodeGenerator::VarSize);
+}
+
+Location *Call::cgen() {
+    FnDecl *fnDecl = NULL;
+    Location *baseLocation = NULL;
+    List<Location *> *params = new List<Location *>;
+    int offSet = -1;
+    // get base location of acall inlcuding implied "this" and class object as base
+    if (base == NULL) {
+        fnDecl = dynamic_cast<FnDecl *>(scope->GetSymbol(field->GetName()));
+        Assert(fnDecl);
+        if (fnDecl->offset != -1) {
+            // implied this
+            ifAcall = true;
+            baseLocation = new Location(fpRelative, 4, "this");
+            offSet = fnDecl->offset;
+        }
+    } else {
+        ifAcall = true;
+        Decl *baseDeclNode =
+            StackNode::namedTypeTable->GetSymbol(base->cachedType->GetName());
+        Assert(baseDeclNode);
+        ClassDecl *baseDecl = dynamic_cast<ClassDecl *>(baseDeclNode);
+        Assert(baseDecl);
+        fnDecl = dynamic_cast<FnDecl *>(baseDecl->GetFields(field->GetName()));
+        Assert(fnDecl);
+        Assert(fnDecl->offset != -1);
+        baseLocation = base->cgen();
+        offSet = fnDecl->offset;
+    }
+    for (int i = 0; i < actuals->NumElements(); i++) {
+        params->Append(actuals->Nth(i)->cgen());
+    }
+    Location *callLocation = NULL;
+    if (ifAcall) {
+        Location *vtableLocation =
+            CodeGenerator::instance->GenLoad(baseLocation, 0);
+        Assert(offSet != -1);
+        callLocation = CodeGenerator::instance->GenLoad(vtableLocation, offSet);
+    }
+    Location *rv = NULL;
+    int numElements = params->NumElements();
+    for (int i = 0; i < numElements; i++) {
+        CodeGenerator::instance->GenPushParam(params->Nth(numElements - i - 1));
+    }
+    if (ifAcall) {
+        Assert(baseLocation);
+        CodeGenerator::instance->GenPushParam(baseLocation);
+        rv = CodeGenerator::instance->GenACall(callLocation,
+                                               cachedType != Type::voidType);
+    } else {
+        Assert(fnDecl->offset == -1);
+        Assert(fnDecl->label);
+        rv = CodeGenerator::instance->GenLCall(fnDecl->label,
+                                               cachedType != Type::voidType);
+    }
+    genPopParams();
+    return rv;
 }

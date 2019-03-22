@@ -62,20 +62,22 @@ void Program::Check() {
 void Program::Emit() {
     // first locations
     int cnt = 0;
-    for (auto &i : children()) {
-        VarDecl *var = dynamic_cast<VarDecl *>(i);
+    for (int i = 0; i < decls->NumElements(); i++) {
+        Decl *decl = decls->Nth(i);
+        VarDecl *var = dynamic_cast<VarDecl *>(decl);
         if (var) {
             var->location =
                 new Location(gpRelative, (cnt++) * 4, var->GetName());
             continue;
         }
-        ClassDecl *clas = dynamic_cast<ClassDecl *>(i);
-        if (clas) {
-            clas->generateLocations();
-            continue;
-        }
+        // generate labels for functions and generate locations for classes members
+        decl->PrePareForEmit();
+        // check if exists main
     }
-    // Function locations are all at the beginning so we can combine
+    if (!CodeGenerator::instance->ifMain) {
+        ReportError::NoMainFound();
+    }
+    // local vars locations are all at the beginning so we can combine
     // this with emit
     for (auto &i : children()) {
         VarDecl *var = dynamic_cast<VarDecl *>(i);

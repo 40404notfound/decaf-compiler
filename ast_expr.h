@@ -173,27 +173,7 @@ public:
     }
     RelationalExpr(Expr *lhs, Operator *op, Expr *rhs)
         : ArithmeticExpr(lhs, op, rhs) {}
-    virtual Location *cgen() {
-        Location *l = left->cgen();
-        Location *r = right->cgen();
-        char *opStr = op->getToken();
-        if (strcmp(opStr, "<=") == 0) {
-            Location *lessThan =
-                CodeGenerator::instance->GenBinaryOp("<", l, r);
-            Location *equal = CodeGenerator::instance->GenBinaryOp("==", l, r);
-            Location *rv =
-                CodeGenerator::instance->GenBinaryOp("||", lessThan, equal);
-            return rv;
-        } else if (strcmp(opStr, ">=") == 0) {
-            Location *greaterThan =
-                CodeGenerator::instance->GenBinaryOp(">", l, r);
-            Location *equal = CodeGenerator::instance->GenBinaryOp("==", l, r);
-            Location *rv =
-                CodeGenerator::instance->GenBinaryOp("||", greaterThan, equal);
-            return rv;
-        }
-        return CompoundExpr::cgen();
-    }
+    virtual Location *cgen();
 };
 
 class EqualityExpr : public CompoundExpr {
@@ -573,8 +553,15 @@ protected:
         }
     }
 
+    void genPushParams();
+    void genPopParams();
+    bool ifAcall = false;
+    // Location* baseLocation = NULL;
+    // List<Location*>* params = NULL;
 public:
     Call(yyltype loc, Expr *base, Identifier *field, List<Expr *> *args);
+
+    Location *cgen();
 };
 
 class NewExpr : public Expr {
@@ -591,6 +578,7 @@ public:
     }
     NewExpr(yyltype loc, NamedType *clsType);
     void CheckType();
+    Location* cgen();
 };
 
 class NewArrayExpr : public Expr {
@@ -612,6 +600,7 @@ public:
     }
     NewArrayExpr(yyltype loc, Expr *sizeExpr, Type *elemType);
     void CheckType();
+    Location* cgen();
 };
 
 class ReadIntegerExpr : public Expr {

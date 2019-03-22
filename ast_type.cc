@@ -49,6 +49,13 @@ Type* NamedType::CheckTypeHelper(reasonT reason) {
     return this;
 }
 
+int NamedType::GetTypeSize() {
+       ClassDecl* classDecl = dynamic_cast<ClassDecl*>(StackNode::namedTypeTable->GetSymbol(GetName()));
+       // 1 is for vtable
+       return (1+classDecl->numVar)*CodeGenerator::VarSize;
+
+}
+
 /* bool NamedType::IsCompatible(Type *other) { */
 /*     NamedType* otherType = dynamic_cast<NamedType*>(other); */
 /*     if (otherType == NULL) return false; */

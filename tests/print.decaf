@@ -1,0 +1,9 @@
+void main() {
+    Print(1);
+    Print(2);
+    Print(1==2);
+    Print(2==2);
+    Print("123"=="123");
+    Print("13"=="123");
+    Print("13");
+}

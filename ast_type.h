@@ -44,6 +44,7 @@ public:
     /* virtual bool IsCompatible(Type *other) { return this == other; } */
     virtual const char *GetName() { return typeName; }
     virtual Type *CheckTypeHelper(reasonT) { return this; }
+    virtual int GetTypeSize() { return 4; }
 };
 
 class NamedType : public Type {
@@ -55,16 +56,6 @@ protected:
         return result;
     }
 
-    /*void Check(Context ctx) {
-        Node::Check(ctx);
-        auto src=id->scope->GetSymbol(id->GetName());
-
-        if(src==NULL)
-            ;//ReportError::IdentifierNotDeclared(id,reasonT::LookingForType); OK ALREADY CHECKED BY YXY SO NO NEED CHECK FOR IT AGAIN
-
-
-    }*/
-
 public:
     NamedType(Identifier *i);
     void PrintToStream(std::ostream &out) { out << id; }
@@ -72,6 +63,7 @@ public:
     const char *GetName() { return id->GetName(); }
     Identifier *GetId() { return id; }
     Type *CheckTypeHelper(reasonT);
+    int GetTypeSize();
 };
 
 //INVISIBLE TYPE NODE FOR CLASS AND INTERFACE
