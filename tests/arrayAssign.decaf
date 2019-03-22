@@ -1,0 +1,11 @@
+class A {
+    int[] a;
+    void tmp() {
+        a[1] = 2;
+    }
+}
+void main() {
+    int[][] a;
+    int b;
+    a[1][1] = 2;
+}

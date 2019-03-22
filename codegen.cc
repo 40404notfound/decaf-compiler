@@ -87,7 +87,11 @@ Location *CodeGenerator::GenBinaryOp(const char *opName, Location *op1,
 						     Location *op2)
 {
   Location *result = GenTempVar();
+  if (strcmp(opName, ">")==0)  {
+    code->Append(new BinaryOp(BinaryOp::OpCodeForName("<"), result, op2, op1));
+  } else {
   code->Append(new BinaryOp(BinaryOp::OpCodeForName(opName), result, op1, op2));
+  }
   return result;
 }
 

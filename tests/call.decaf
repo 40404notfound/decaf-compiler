@@ -1,0 +1,5 @@
+void tmp() {
+}
+void main() {
+    tmp();
+}

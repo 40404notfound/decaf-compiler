@@ -136,9 +136,9 @@ void NewArrayExpr::CheckType() {
 
 void AssignExpr::Emit() {
     // assign to class member var or store to local
-    Location *rhs = right->cgen();
+    // Location *rhs = right->cgen();
     LValue *lvalue = dynamic_cast<LValue *>(left);
-    lvalue->getAssign(rhs);
+    lvalue->getAssign(right);
 }
 
 void FieldAccess::genBaseAndOffSet() {
@@ -175,12 +175,14 @@ Location *FieldAccess::cgen() {
     // load from baseLocation & offSet
     Assert(baseLocation == NULL && offSet == 0);
     genBaseAndOffSet();
-    if (offSet == -1) return baseLocation;
+    if (offSet == -1)
+        return baseLocation;
     return CodeGenerator::instance->GenLoad(baseLocation, offSet);
 }
 
-void FieldAccess::getAssign(Location *rhs) {
+void FieldAccess::getAssign(Expr *expr) {
     Assert(baseLocation == NULL && offSet == 0);
+    Location *rhs = expr->cgen();
     genBaseAndOffSet();
     if (offSet == -1) {
         CodeGenerator::instance->GenAssign(baseLocation, rhs);
@@ -189,19 +191,40 @@ void FieldAccess::getAssign(Location *rhs) {
     CodeGenerator::instance->GenStore(baseLocation, rhs, offSet);
 }
 
+void ArrayAccess::genFinalLocation() {
+    Location *baseLocation = base->cgen();
+    Location *sub = subscript->cgen();
+    Location *zero = CodeGenerator::instance->GenLoadConstant(0);
+    Location *lessZero = CodeGenerator::instance->GenBinaryOp("<", sub, zero);
+    Location *arrayLength = CodeGenerator::instance->GenLoad(baseLocation, -4);
+    Location *lessLength =
+        CodeGenerator::instance->GenBinaryOp("<", sub, arrayLength);
+    Location *greaterOrEqualLength = CodeGenerator::instance->GenBinaryOp(
+        "==", lessLength, zero); // lessLength == 0
+    Location *outOfBoundTest = CodeGenerator::instance->GenBinaryOp(
+        "||", lessZero, greaterOrEqualLength);
+    const char *correctLabel = CodeGenerator::instance->NewLabel();
+    CodeGenerator::instance->GenIfZ(outOfBoundTest, correctLabel);
+    CodeGenerator::instance->GenError(ArrayOutOfBound);
+    CodeGenerator::instance->GenLabel(correctLabel);
 
-void ArrayAccess::genBaseAndOffSet() {
-
+    // get index offSet and generate finalLocation
+    Location *four = CodeGenerator::instance->GenLoadConstant(4);
+    Location *totalOffSet =
+        CodeGenerator::instance->GenBinaryOp("*", four, sub);
+    finalLocation =
+        CodeGenerator::instance->GenBinaryOp("+", baseLocation, totalOffSet);
 }
 
 Location *ArrayAccess::cgen() {
     Assert(baseLocation == NULL && offSet == 0);
-    genBaseAndOffSet();
-    return CodeGenerator::instance->GenLoad(baseLocation, offSet);
+    genFinalLocation();
+    return CodeGenerator::instance->GenLoad(finalLocation, 0);
 }
 
-void ArrayAccess::getAssign(Location* rhs) {
+void ArrayAccess::getAssign(Expr *expr) {
     Assert(baseLocation == NULL && offSet == 0);
-    genBaseAndOffSet();
-    CodeGenerator::instance->GenStore(baseLocation, rhs, offSet);
+    genFinalLocation();
+    Location *rhs = expr->cgen();
+    CodeGenerator::instance->GenStore(finalLocation, rhs, 0);
 }

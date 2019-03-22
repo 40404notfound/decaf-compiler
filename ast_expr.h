@@ -31,6 +31,7 @@ public:
     Expr(yyltype loc) : Stmt(loc) {}
     Expr() : Stmt() {}
     virtual Location *cgen() { return NULL; }
+    virtual void Emit() { cgen(); }
 };
 
 /* This node type is used for those places where an expression is optional.
@@ -122,7 +123,7 @@ public:
         Location *l = left->cgen();
         Location *r = right->cgen();
         char *opStr = op->getToken();
-        // {"+", "-", "*", "/", "%", "==", "<", "&&", "||"};;
+        // {"+", "-", "*", "/", "%", "==", "<", "&&", "||"} + ">"
         return CodeGenerator::instance->GenBinaryOp(op->getToken(), l, r);
     }
 };
@@ -293,7 +294,7 @@ public:
 class LValue : public Expr {
 public:
     LValue(yyltype loc) : Expr(loc) {}
-    virtual void getAssign(Location *rhs) = 0;
+    virtual void getAssign(Expr *expr) = 0;
 };
 
 class This : public Expr {
@@ -321,9 +322,11 @@ protected:
     vector<Node *> children();
 
     // for IR
+    Location *finalLocation = NULL;
     Location *baseLocation = NULL;
     int offSet = 0;
     void genBaseAndOffSet();
+    void genFinalLocation();
 
 public:
     void Check(Context ctx) {
@@ -348,7 +351,7 @@ public:
     ArrayAccess(yyltype loc, Expr *base, Expr *subscript);
 
     Location *cgen();
-    virtual void getAssign(Location *rhs);
+    virtual void getAssign(Expr *expr);
 };
 
 /* Note that field access is used both for qualified names
@@ -450,7 +453,7 @@ protected:
 public:
     FieldAccess(Expr *base, Identifier *field); //ok to pass NULL base
     Location *cgen();
-    void getAssign(Location *rhs);
+    void getAssign(Expr *expr);
 };
 
 /* Like field access, call is used both for qualified base.field()
