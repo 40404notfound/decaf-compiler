@@ -6,17 +6,42 @@
 #	./dcc < $i
 #done
 echo @@testing on samples/\*
-for i in $(ls samples/*.decaf); do
+for i in $(ls samples/*.decaf | grep -v 't5\|badlink\|black\|fib\|sort'); do
     echo @@@ $i @@@
     y=${i%.decaf}
     f=${y##*/}
     # ./solution/dcccaenupdate < $i 2> samples/$f.out
     ./dcc < $i > out/$f.my.s
+    # spim -f out/$f.my.s < samples/$f.in | tail -n +6 > out/$f.my.out
     spim -f out/$f.my.s | tail -n +6 > out/$f.my.out
-    cat samples/$f.out | tail -n +1 > out/$f.cor.out
+    cat samples/$f.out | tail -n +2 > out/$f.cor.out
     diff -w out/$f.my.out out/$f.cor.out
 done
 
+for i in $(ls samples/*.decaf | grep 't5\|black\|fib\|sort'); do
+    echo @@@ $i @@@
+    y=${i%.decaf}
+    f=${y##*/}
+    # ./solution/dcccaenupdate < $i 2> samples/$f.out
+    ./dcc < $i > out/$f.my.s
+    # spim -f out/$f.my.s < samples/$f.in | tail -n +6 > out/$f.my.out
+    spim -f out/$f.my.s < samples/$f.in | tail -n +6 > out/$f.my.out
+    cat samples/$f.out | tail -n +2 > out/$f.cor.out
+    diff -w out/$f.my.out out/$f.cor.out
+done
+
+
+# for i in $(ls samples/*.decaf | grep 'badlink\'); do
+#     echo @@@ $i @@@
+#     y=${i%.decaf}
+#     f=${y##*/}
+#     # ./solution/dcccaenupdate < $i 2> samples/$f.out
+#     ./dcc < $i &> out/$f.my.out
+#     # spim -f out/$f.my.s < samples/$f.in | tail -n +6 > out/$f.my.out
+#     # spim -f out/$f.my.s < samples/$f.in | tail -n +6 > out/$f.my.out
+#     # cat samples/$f.out | tail -n +2 > out/$f.cor.out
+#     diff -w out/$f.my.out samples/$f.out
+# done
 # echo @@tesing on tests/\*
 
 # for i in $(ls tests/*.decaf); do

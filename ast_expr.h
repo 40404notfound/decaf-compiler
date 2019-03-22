@@ -95,6 +95,9 @@ class NullConstant : public Expr {
 public:
     void Check(Context ctx) { cachedType = Type::nullType; }
     NullConstant(yyltype loc) : Expr(loc) {}
+    virtual Location *cgen() {
+        return CodeGenerator::instance->GenLoadConstant(0);
+    }
 };
 
 class Operator : public Node {
