@@ -49,7 +49,7 @@ public:
     bool in_loop=false;
 
 
-    Type* rettype= nullptr;
+    Type* rettype=NULL;
 
 };  
 
